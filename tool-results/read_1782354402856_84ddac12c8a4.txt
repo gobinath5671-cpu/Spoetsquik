@@ -1,0 +1,968 @@
+     1→     1→# ═══════════════════════════════════════════════════════════════
+     2→     2→# SPORTSFEST — INTER-COLLEGE SPORTS EVENTS PORTAL
+     3→     3→# MASTER ENGINEERING & DESIGN PROMPT
+     4→     4→# Prepared by: Senior Prompt Engineer
+     5→     5→# Stack: MERN (MongoDB · Express.js · React.js · Node.js)
+     6→     6→# ═══════════════════════════════════════════════════════════════
+     7→     7→
+     8→     8→---
+     9→     9→
+    10→    10→## 0. MISSION STATEMENT
+    11→    11→
+    12→    12→Build a full-stack **Inter-College Sports Events Portal** called **SportsFest**.
+    13→    13→The platform has two distinct panels:
+    14→    14→
+    15→    15→| Panel | Purpose |
+    16→    16→|---|---|
+    17→    17→| **Admin Panel** | Authorized admin feeds upcoming sports events from colleges/schools |
+    18→    18→| **User Panel** | Students browse, filter, and register for sports events |
+    19→    19→
+    20→    20→The entire platform uses a **strict Black & White theme** with
+    21→    21→**liquid glassmorphism effects**, a **macOS-style dock navigation**,
+    22→    22→**dark/light mode toggle**, and **premium custom typography**.
+    23→    23→
+    24→    24→---
+    25→    25→
+    26→    26→## 1. TECH STACK
+    27→    27→
+    28→    28→| Layer | Technology |
+    29→    29→|---|---|
+    30→    30→| Frontend | React.js (Vite) + React Router v6 |
+    31→    31→| Styling | Tailwind CSS v3 + custom CSS for glassmorphism |
+    32→    32→| State Management | Zustand (lightweight, no Redux boilerplate) |
+    33→    33→| Backend | Node.js + Express.js |
+    34→    34→| Database | MongoDB (Mongoose ODM) |
+    35→    35→| Authentication | JWT (access token + refresh token) + bcryptjs |
+    36→    36→| File Uploads | Multer (ID card image upload) |
+    37→    37→| Email | Nodemailer (registration confirmation emails) |
+    38→    38→| PDF Export | jsPDF + jsPDF-autotable (registration slip) |
+    39→    39→| QR Code | qrcode npm package (unique QR per registration) |
+    40→    40→| Deployment | Frontend → Vercel · Backend → Render · DB → MongoDB Atlas |
+    41→    41→| Version Control | Git + GitHub (main / dev / feature/* branches) |
+    42→    42→
+    43→    43→---
+    44→    44→
+    45→    45→## 2. DESIGN SYSTEM
+    46→    46→
+    47→    47→### 2.1 Color Palette (Black & White Core)
+    48→    48→
+    49→    49→```
+    50→    50→--color-white:        #FFFFFF
+    51→    51→--color-off-white:    #F5F5F5
+    52→    52→--color-light-gray:   #E0E0E0
+    53→    53→--color-mid-gray:     #9E9E9E
+    54→    54→--color-dark-gray:    #1A1A1A
+    55→    55→--color-pure-black:   #000000
+    56→    56→--color-glass-white:  rgba(255,255,255,0.08)
+    57→    57→--color-glass-border: rgba(255,255,255,0.18)
+    58→    58→--color-glass-dark:   rgba(0,0,0,0.35)
+    59→    59→--color-accent:       #FFFFFF  (white glow in dark mode)
+    60→    60→--color-accent-dark:  #111111  (black shadow in light mode)
+    61→    61→```
+    62→    62→
+    63→    63→### 2.2 Typography — Font Roles
+    64→    64→
+    65→    65→Use these Google Fonts. Import all via `@import` in `index.css`:
+    66→    66→
+    67→    67→| Role | Font Family | Use Case |
+    68→    68→|---|---|---|
+    69→    69→| Display / Hero | `Bebas Neue` | Big headings, event titles, score counters |
+    70→    70→| UI / Body | `Space Grotesk` | Paragraphs, labels, body text |
+    71→    71→| Accent / Stylistic | `Cormorant Garamond` | Taglines, quotes, sub-headings |
+    72→    72→| Data / Mono | `JetBrains Mono` | Dates, IDs, roll numbers, code/form data |
+    73→    73→| Decorative | `Playfair Display` | Admin panel section headers |
+    74→    74→
+    75→    75→```css
+    76→    76→/* import example */
+    77→    77→@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;1,300&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@500;700&display=swap');
+    78→    78→```
+    79→    79→
+    80→    80→### 2.3 Glassmorphism Card Mixin
+    81→    81→
+    82→    82→```css
+    83→    83→.glass-card {
+    84→    84→  background: rgba(255, 255, 255, 0.06);
+    85→    85→  backdrop-filter: blur(16px) saturate(180%);
+    86→    86→  -webkit-backdrop-filter: blur(16px) saturate(180%);
+    87→    87→  border: 1px solid rgba(255, 255, 255, 0.15);
+    88→    88→  border-radius: 16px;
+    89→    89→  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    90→    90→}
+    91→    91→
+    92→    92→/* Light mode override */
+    93→    93→[data-theme="light"] .glass-card {
+    94→    94→  background: rgba(255, 255, 255, 0.55);
+    95→    95→  border: 1px solid rgba(0, 0, 0, 0.08);
+    96→    96→  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    97→    97→}
+    98→    98→```
+    99→    99→
+   100→   100→### 2.4 Liquid Glass Effect
+   101→   101→
+   102→   102→Apply a subtle animated shimmer sweep on glass cards:
+   103→   103→
+   104→   104→```css
+   105→   105→.glass-card::before {
+   106→   106→  content: '';
+   107→   107→  position: absolute;
+   108→   108→  inset: 0;
+   109→   109→  border-radius: inherit;
+   110→   110→  background: linear-gradient(
+   111→   111→    135deg,
+   112→   112→    rgba(255,255,255,0.12) 0%,
+   113→   113→    transparent 50%,
+   114→   114→    rgba(255,255,255,0.04) 100%
+   115→   115→  );
+   116→   116→  pointer-events: none;
+   117→   117→}
+   118→   118→```
+   119→   119→
+   120→   120→### 2.5 macOS-Style Dock Navigation
+   121→   121→
+   122→   122→- Fixed at bottom of screen
+   123→   123→- Icons magnify on hover (scale + translate-Y) using CSS transitions
+   124→   124→- Glass background with blur
+   125→   125→- Shows tooltip label above each icon on hover
+   126→   126→- Icons: Home, Events, My Registrations, Profile, Logout (user side)
+   127→   127→- Icons: Dashboard, Add Event, All Events, Registrations, Logout (admin side)
+   128→   128→
+   129→   129→```css
+   130→   130→.dock {
+   131→   131→  position: fixed;
+   132→   132→  bottom: 20px;
+   133→   133→  left: 50%;
+   134→   134→  transform: translateX(-50%);
+   135→   135→  display: flex;
+   136→   136→  gap: 12px;
+   137→   137→  padding: 10px 20px;
+   138→   138→  background: rgba(255,255,255,0.08);
+   139→   139→  backdrop-filter: blur(20px);
+   140→   140→  border: 1px solid rgba(255,255,255,0.15);
+   141→   141→  border-radius: 24px;
+   142→   142→  z-index: 1000;
+   143→   143→}
+   144→   144→
+   145→   145→.dock-icon {
+   146→   146→  width: 48px;
+   147→   147→  height: 48px;
+   148→   148→  border-radius: 12px;
+   149→   149→  cursor: pointer;
+   150→   150→  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
+   151→   151→}
+   152→   152→
+   153→   153→.dock-icon:hover {
+   154→   154→  transform: scale(1.45) translateY(-10px);
+   155→   155→  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+   156→   156→}
+   157→   157→```
+   158→   158→
+   159→   159→### 2.6 Dark / Light Mode Toggle
+   160→   160→
+   161→   161→- Toggle switch (sun/moon icon) fixed at top-right corner
+   162→   162→- Store preference in `localStorage`
+   163→   163→- `data-theme` attribute on `<html>` tag drives all CSS variable swaps
+   164→   164→- Default: Dark mode
+   165→   165→
+   166→   166→---
+   167→   167→
+   168→   168→## 3. ROUTE TREE
+   169→   169→
+   170→   170→```
+   171→   171→/                         → Redirect based on auth state
+   172→   172→/login                    → Unified Login Page (Admin or User)
+   173→   173→/register                 → User First-Time Registration
+   174→   174→
+   175→   175→/user/                    → User Panel (Protected)
+   176→   176→  home                    → Events feed (latest first)
+   177→   177→  events                  → All events with full filter panel
+   178→   178→  events/:id              → Single event detail page
+   179→   179→  events/:id/apply        → Student registration form
+   180→   180→  my-registrations        → Registered events list
+   181→   181→  profile                 → User profile & settings
+   182→   182→
+   183→   183→/admin/                   → Admin Panel (Protected — Admin only)
+   184→   184→  dashboard               → Stats overview
+   185→   185→  add-event               → Feed new event form
+   186→   186→  events                  → All events table (Edit / Delete)
+   187→   187→  events/:id/edit         → Edit existing event
+   188→   188→  registrations           → View all student registrations
+   189→   189→  registrations/:eventId  → Registrations per event (with export)
+   190→   190→```
+   191→   191→
+   192→   192→---
+   193→   193→
+   194→   194→## 4. AUTHENTICATION SYSTEM
+   195→   195→
+   196→   196→### 4.1 Login Page (`/login`)
+   197→   197→
+   198→   198→- Clean full-screen page
+   199→   199→- `Bebas Neue` large heading: **"SPORTSFEST"**
+   200→   200→- Sub: `"Inter-College Sports Events Portal"` in `Cormorant Garamond`
+   201→   201→- Single glass card in center with:
+   202→   202→  - Email input
+   203→   203→  - Password input
+   204→   204→  - "Login" button
+   205→   205→  - "New here? Register" link (→ `/register`)
+   206→   206→- On submit: backend detects if credentials match admin → routes to `/admin/dashboard`
+   207→   207→  else → routes to `/user/home`
+   208→   208→
+   209→   209→### 4.2 Admin Credentials (Hardcoded in `.env`)
+   210→   210→
+   211→   211→```env
+   212→   212→ADMIN_EMAIL=gobinath5671@gmail.com
+   213→   213→ADMIN_PASSWORD=Gobin@th.31
+   214→   214→```
+   215→   215→
+   216→   216→> Admin password is also bcrypt-hashed and stored in DB on first server start (seed script).
+   217→   217→> Admin cannot self-register; credentials are controlled via `.env`.
+   218→   218→
+   219→   219→### 4.3 User Registration (`/register`)
+   220→   220→
+   221→   221→First-time flow:
+   222→   222→- Full Name
+   223→   223→- Email
+   224→   224→- College Name
+   225→   225→- Department, Year, Section
+   226→   226→- Roll Number
+   227→   227→- Password (+ Confirm Password)
+   228→   228→- Phone Number
+   229→   229→
+   230→   230→After register → auto-login → `/user/home`
+   231→   231→
+   232→   232→On subsequent visits → `/login` → enter email + password → `/user/home`
+   233→   233→
+   234→   234→### 4.4 JWT Strategy
+   235→   235→
+   236→   236→- `accessToken` (expires: 1h) — stored in `httpOnly` cookie
+   237→   237→- `refreshToken` (expires: 7d) — stored in `httpOnly` cookie
+   238→   238→- `/auth/refresh` endpoint silently refreshes access token
+   239→   239→- Axios interceptor in frontend handles 401 → auto-refresh → retry request
+   240→   240→
+   241→   241→---
+   242→   242→
+   243→   243→## 5. DATABASE SCHEMA (MongoDB / Mongoose)
+   244→   244→
+   245→   245→### 5.1 `users` Collection
+   246→   246→
+   247→   247→```js
+   248→   248→{
+   249→   249→  _id: ObjectId,
+   250→   250→  fullName: String,           // required
+   251→   251→  email: { type: String, unique: true, required: true },
+   252→   252→  passwordHash: String,       // bcrypt
+   253→   253→  role: { type: String, enum: ['student', 'admin'], default: 'student' },
+   254→   254→  collegeName: String,
+   255→   255→  department: String,
+   256→   256→  year: String,
+   257→   257→  section: String,
+   258→   258→  rollNumber: String,
+   259→   259→  phone: String,
+   260→   260→  profilePicture: String,     // URL (optional)
+   261→   261→  createdAt: Date,
+   262→   262→  updatedAt: Date
+   263→   263→}
+   264→   264→```
+   265→   265→
+   266→   266→### 5.2 `events` Collection
+   267→   267→
+   268→   268→```js
+   269→   269→{
+   270→   270→  _id: ObjectId,
+   271→   271→  collegeName: { type: String, required: true },
+   272→   272→  eventName: { type: String, required: true },
+   273→   273→  eventDate: { type: Date, required: true },
+   274→   274→  reportingTime: String,                   // e.g. "8:30 AM"
+   275→   275→  venue: String,                           // Ground / Indoor Stadium / Specific Court
+   276→   276→  chiefGuest: String,
+   277→   277→  categories: [{ type: String, enum: ['Men', 'Women', 'Both'] }],
+   278→   278→  sportsAndGames: [String],                // array of sport names
+   279→   279→  tournamentFormat: { type: String, enum: ['Knockout', 'League', 'Athletics', 'Mixed'] },
+   280→   280→  eligibility: String,
+   281→   281→  prizes: {
+   282→   282→    cashPrizes: String,
+   283→   283→    medals: Boolean,
+   284→   284→    overallChampionship: Boolean,
+   285→   285→    details: String
+   286→   286→  },
+   287→   287→  entryFee: {
+   288→   288→    perTeam: Number,
+   289→   289→    perPlayer: Number,
+   290→   290→    isFree: Boolean
+   291→   291→  },
+   292→   292→  generalRules: String,
+   293→   293→  dresscode: String,
+   294→   294→  registrationDeadline: Date,
+   295→   295→  registrationLink: String,               // external link (optional)
+   296→   296→  contactDetails: {
+   297→   297→    physicalDirectorName: String,
+   298→   298→    physicalDirectorPhone: String,
+   299→   299→    sportsCapitainName: String,
+   300→   300→    sportsCapitainPhone: String,
+   301→   301→    email: String
+   302→   302→  },
+   303→   303→  eventPoster: String,                    // uploaded image URL (optional)
+   304→   304→  status: { type: String, enum: ['upcoming', 'ongoing', 'completed'], default: 'upcoming' },
+   305→   305→  targetAudience: { type: String, enum: ['College', 'School', 'Both'] },
+   306→   306→  createdBy: { type: ObjectId, ref: 'User' },
+   307→   307→  createdAt: Date,
+   308→   308→  updatedAt: Date
+   309→   309→}
+   310→   310→```
+   311→   311→
+   312→   312→### 5.3 `registrations` Collection
+   313→   313→
+   314→   314→```js
+   315→   315→{
+   316→   316→  _id: ObjectId,
+   317→   317→  eventId: { type: ObjectId, ref: 'Event', required: true },
+   318→   318→  studentId: { type: ObjectId, ref: 'User' },   // if logged in
+   319→   319→  registrationCode: String,                      // unique auto-generated e.g. "SF-2025-00123"
+   320→   320→  qrCodeData: String,                            // base64 QR image
+   321→   321→
+   322→   322→  // Student info at time of registration (snapshot)
+   323→   323→  fullName: { type: String, required: true },
+   324→   324→  rollNumber: { type: String, required: true },
+   325→   325→  department: String,
+   326→   326→  year: String,
+   327→   327→  section: String,
+   328→   328→  collegeName: String,
+   329→   329→  selectedSport: { type: String, required: true },
+   330→   330→  eventCategory: String,                         // e.g. "Badminton Singles", "100m Sprint"
+   331→   331→  teamDetails: {
+   332→   332→    isTeamGame: Boolean,
+   333→   333→    teamName: String,
+   334→   334→    captainName: String,
+   335→   335→    members: [String]
+   336→   336→  },
+   337→   337→  idCardUrl: String,                             // Multer uploaded image path
+   338→   338→  contactNumber: { type: String, required: true },
+   339→   339→  emailId: { type: String, required: true },
+   340→   340→  emergencyContact: {
+   341→   341→    name: String,
+   342→   342→    phone: String,
+   343→   343→    relation: String
+   344→   344→  },
+   345→   345→  medicalDeclaration: {
+   346→   346→    fitnessConfirmed: Boolean,
+   347→   347→    bloodGroup: String
+   348→   348→  },
+   349→   349→  paymentReceipt: {
+   350→   350→    transactionId: String,
+   351→   351→    receiptUrl: String,
+   352→   352→    isPaid: Boolean
+   353→   353→  },
+   354→   354→  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+   355→   355→  appliedAt: Date,
+   356→   356→  updatedAt: Date
+   357→   357→}
+   358→   358→```
+   359→   359→
+   360→   360→---
+   361→   361→
+   362→   362→## 6. BACKEND API — EXPRESS.JS
+   363→   363→
+   364→   364→### 6.1 Auth Routes `/api/auth`
+   365→   365→
+   366→   366→| Method | Endpoint | Description | Access |
+   367→   367→|---|---|---|---|
+   368→   368→| POST | `/register` | User registration | Public |
+   369→   369→| POST | `/login` | Login (admin + user) | Public |
+   370→   370→| POST | `/logout` | Clear cookies | Private |
+   371→   371→| POST | `/refresh` | Refresh access token | Private |
+   372→   372→| GET | `/me` | Get current user info | Private |
+   373→   373→
+   374→   374→### 6.2 Event Routes `/api/events`
+   375→   375→
+   376→   376→| Method | Endpoint | Description | Access |
+   377→   377→|---|---|---|---|
+   378→   378→| GET | `/` | Get all events (with filters) | Public |
+   379→   379→| GET | `/:id` | Get single event details | Public |
+   380→   380→| POST | `/` | Create new event | Admin only |
+   381→   381→| PUT | `/:id` | Update event | Admin only |
+   382→   382→| DELETE | `/:id` | Delete event | Admin only |
+   383→   383→| PATCH | `/:id/status` | Toggle status (upcoming/ongoing/completed) | Admin only |
+   384→   384→| GET | `/stats/overview` | Events count by status | Admin only |
+   385→   385→
+   386→   386→#### Filter Query Params for `GET /api/events`:
+   387→   387→```
+   388→   388→?status=upcoming|ongoing|completed
+   389→   389→?sport=cricket|football|...
+   390→   390→?targetAudience=College|School|Both
+   391→   391→?date=2025-07-15           (exact date)
+   392→   392→?fromDate=...&toDate=...   (date range)
+   393→   393→?college=<name>
+   394→   394→?format=Knockout|League|Athletics
+   395→   395→?search=<keyword>          (eventName or collegeName)
+   396→   396→?page=1&limit=12           (pagination)
+   397→   397→?sortBy=date|createdAt&order=asc|desc
+   398→   398→```
+   399→   399→
+   400→   400→### 6.3 Registration Routes `/api/registrations`
+   401→   401→
+   402→   402→| Method | Endpoint | Description | Access |
+   403→   403→|---|---|---|---|
+   404→   404→| POST | `/:eventId` | Register student for event | User (logged in) |
+   405→   405→| GET | `/my` | Get current user's registrations | User |
+   406→   406→| GET | `/event/:eventId` | All registrations for an event | Admin |
+   407→   407→| GET | `/` | All registrations (with search/filter) | Admin |
+   408→   408→| PATCH | `/:id/status` | Approve / Reject registration | Admin |
+   409→   409→| GET | `/:id/receipt` | Download registration PDF | User |
+   410→   410→| GET | `/event/:eventId/export` | Export as CSV or text file | Admin |
+   411→   411→
+   412→   412→### 6.4 User Routes `/api/users`
+   413→   413→
+   414→   414→| Method | Endpoint | Description | Access |
+   415→   415→|---|---|---|---|
+   416→   416→| GET | `/profile` | Get own profile | User |
+   417→   417→| PUT | `/profile` | Update profile | User |
+   418→   418→| POST | `/profile/picture` | Upload profile picture | User |
+   419→   419→| GET | `/` | Get all users | Admin |
+   420→   420→
+   421→   421→### 6.5 Upload Route `/api/upload`
+   422→   422→
+   423→   423→| Method | Endpoint | Description |
+   424→   424→|---|---|---|
+   425→   425→| POST | `/id-card` | Upload student ID card image (Multer) |
+   426→   426→| POST | `/event-poster` | Upload event poster image (Admin) |
+   427→   427→
+   428→   428→### 6.6 Backend Middleware
+   429→   429→
+   430→   430→- `authMiddleware` — verify JWT from httpOnly cookie
+   431→   431→- `adminMiddleware` — check `role === 'admin'`
+   432→   432→- `rateLimiter` — express-rate-limit (100 req/15min per IP)
+   433→   433→- `helmet` — security headers
+   434→   434→- `cors` — allow frontend origin only
+   435→   435→- `morgan` — HTTP logging
+   436→   436→- `errorHandler` — global error middleware with consistent JSON error shape
+   437→   437→
+   438→   438→---
+   439→   439→
+   440→   440→## 7. ADMIN PANEL — UI & FEATURES
+   441→   441→
+   442→   442→### 7.1 Dashboard (`/admin/dashboard`)
+   443→   443→
+   444→   444→Glass cards showing live stats:
+   445→   445→- Total Events | Upcoming | Ongoing | Completed
+   446→   446→- Total Registrations | Pending | Approved | Rejected
+   447→   447→- Recent 5 events (mini table)
+   448→   448→- Recent 5 registrations (mini table)
+   449→   449→- Quick action buttons: "+ Add Event", "View All Registrations"
+   450→   450→
+   451→   451→Font: `Playfair Display` for section headers, `Space Grotesk` for data.
+   452→   452→
+   453→   453→### 7.2 Add Event Form (`/admin/add-event`)
+   454→   454→
+   455→   455→Multi-step glass form (4 steps with progress bar):
+   456→   456→
+   457→   457→**Step 1 — Basic Info**
+   458→   458→- College Name (text input)
+   459→   459→- Event Name (text input)
+   460→   460→- Event Date (date picker)
+   461→   461→- Reporting Time (time picker)
+   462→   462→- Target Audience (College / School / Both — radio buttons)
+   463→   463→- Event Poster Upload (image, optional)
+   464→   464→
+   465→   465→**Step 2 — Venue & People**
+   466→   466→- Venue (Ground / Indoor Stadium / Specific Court / Custom — with free-text)
+   467→   467→- Chief Guest / Inaugurator (text input)
+   468→   468→- Categories (Men / Women / Both — multi-select checkboxes)
+   469→   469→- Contact: Physical Director Name + Phone
+   470→   470→- Contact: Student Sports Captain Name + Phone
+   471→   471→- Contact Email
+   472→   472→
+   473→   473→**Step 3 — Sports & Format**
+   474→   474→- Which Games Available:
+   475→   475→  - Checkbox grid: Basketball, Football, Soccer, Volleyball, Track & Field, Baseball, Swimming, Badminton, Tennis, Cricket
+   476→   476→  - "+ Add Custom Sport" (free text entry, push to array)
+   477→   477→- Tournament Format (Knockout / League / Athletics / Mixed — radio)
+   478→   478→- Eligibility / Target Audience (textarea)
+   479→   479→
+   480→   480→**Step 4 — Fees, Prizes & Deadline**
+   481→   481→- Entry Fee:
+   482→   482→  - Toggle: Free / Paid
+   483→   483→  - If Paid: Per Team (₹) + Per Player (₹)
+   484→   484→- Prizes & Trophies:
+   485→   485→  - Cash Prizes (text)
+   486→   486→  - Medal toggle
+   487→   487→  - Overall Championship toggle
+   488→   488→  - Prize Details (textarea)
+   489→   489→- General Rules (textarea with markdown support, preview toggle)
+   490→   490→- Kit / Dress Code (text input)
+   491→   491→- Registration Deadline (date + time picker)
+   492→   492→- External Registration Link (URL, optional)
+   493→   493→
+   494→   494→**Form Actions:** Save as Draft | Publish Event
+   495→   495→
+   496→   496→### 7.3 All Events Table (`/admin/events`)
+   497→   497→
+   498→   498→- Searchable, sortable table
+   499→   499→- Columns: College · Event Name · Date · Sports · Status · Registrations Count · Actions
+   500→   500→- Actions per row: View · Edit · Delete · Toggle Status
+   501→   501→- Bulk actions: Select All → Delete / Export
+   502→   502→- Pagination (10 per page)
+   503→   503→
+   504→   504→### 7.4 Registrations View (`/admin/registrations`)
+   505→   505→
+   506→   506→- Master table: All registrations across all events
+   507→   507→- Filter by: Event · Status (Pending / Approved / Rejected) · Date
+   508→   508→- Per registration row: Student Name, Roll No, Sport, Event, Applied On, Status, Actions
+   509→   509→- Actions: Approve ✓ | Reject ✗ | View Full Details
+   510→   510→- Per Event view: `/admin/registrations/:eventId`
+   511→   511→  - Shows all registrations for that event
+   512→   512→  - Export button: download as `.txt` file (formatted) or `.csv`
+   513→   513→
+   514→   514→**Text File Export Format:**
+   515→   515→```
+   516→   516→SPORTSFEST — REGISTRATIONS EXPORT
+   517→   517→Event: [Event Name] | [College Name] | [Date]
+   518→   518→Generated: [Timestamp]
+   519→   519→═══════════════════════════════════════
+   520→   520→#1
+   521→   521→Name: [Full Name]
+   522→   522→Roll No: [Roll Number]
+   523→   523→Dept/Year/Sec: [Department] [Year] [Section]
+   524→   524→College: [College Name]
+   525→   525→Sport: [Sport] — [Category]
+   526→   526→Team: [Team Name] | Captain: [Captain Name]
+   527→   527→Contact: [Phone] | [Email]
+   528→   528→Emergency: [Name] — [Phone]
+   529→   529→Blood Group: [Blood Group]
+   530→   530→Payment: [Transaction ID / FREE]
+   531→   531→Status: [APPROVED / PENDING / REJECTED]
+   532→   532→Registration Code: SF-2025-XXXXX
+   533→   533→───────────────────────────────────────
+   534→   534→```
+   535→   535→
+   536→   536→---
+   537→   537→
+   538→   538→## 8. USER PANEL — UI & FEATURES
+   539→   539→
+   540→   540→### 8.1 Home Page (`/user/home`)
+   541→   541→
+   542→   542→- Full-screen **hero section** with animated text:
+   543→   543→  - Big `Bebas Neue` headline: `"PLAY. COMPETE. WIN."`
+   544→   544→  - Sub: `"Stay updated on every inter-college sports event near you"`
+   545→   545→- Below hero: **"Latest Events"** — horizontal scrollable card row of 6 newest events
+   546→   546→- Below that: **"Upcoming This Week"** — grid of cards
+   547→   547→- **Floating Search Bar** (sticky top) — search by event name or college
+   548→   548→
+   549→   549→### 8.2 Events Page (`/user/events`)
+   550→   550→
+   551→   551→#### Filter Sidebar (left, collapsible on mobile):
+   552→   552→
+   553→   553→| Filter | Options |
+   554→   554→|---|---|
+   555→   555→| Status | Upcoming / Ongoing / Completed (Finished / Past) |
+   556→   556→| Target Audience | All / College / School |
+   557→   557→| Sports | Checkbox list of all unique sports in DB |
+   558→   558→| Tournament Format | Knockout / League / Athletics |
+   559→   559→| Date Range | From Date — To Date picker |
+   560→   560→| College | Searchable dropdown (all unique colleges) |
+   561→   561→| Entry Fee | Free / Paid |
+   562→   562→
+   563→   563→Filter pills shown above results. "Clear All" button.
+   564→   564→
+   565→   565→#### Event Cards (right, grid 3-col desktop / 2-col tablet / 1-col mobile):
+   566→   566→
+   567→   567→Each card (glass morphism):
+   568→   568→- Event Poster (if uploaded) or sport icon placeholder
+   569→   569→- College Name (top badge)
+   570→   570→- Event Name (`Bebas Neue` large)
+   571→   571→- Date + Reporting Time (JetBrains Mono)
+   572→   572→- Venue pill
+   573→   573→- Sport tags (max 3 shown + "+N more")
+   574→   574→- Status badge (color: white glow = upcoming, gray = ongoing, dim = completed)
+   575→   575→- "View Details →" button
+   576→   576→
+   577→   577→#### Sort Options:
+   578→   578→- Newest First | Oldest First | Date (Ascending) | Date (Descending)
+   579→   579→
+   580→   580→### 8.3 Event Detail Page (`/user/events/:id`)
+   581→   581→
+   582→   582→Full detail view:
+   583→   583→- Event poster (if exists) as hero image with overlay text
+   584→   584→- All event info displayed in organized glass panels:
+   585→   585→  - Basic Info panel
+   586→   586→  - Sports & Format panel
+   587→   587→  - Prizes panel
+   588→   588→  - Rules & Dress Code panel (markdown rendered)
+   589→   589→  - Contact panel
+   590→   590→- Countdown timer to event date (`JetBrains Mono` font)
+   591→   591→- "Apply Now" button (→ `/user/events/:id/apply`) — disabled if deadline passed
+   592→   592→- "Save Event" bookmark icon (stores in user profile)
+   593→   593→- Share button (copy link / share native on mobile)
+   594→   594→
+   595→   595→### 8.4 Event Registration Form (`/user/events/:id/apply`)
+   596→   596→
+   597→   597→Glass form. Fields (all from the 10-point checklist):
+   598→   598→
+   599→   599→1. **Full Name & Roll Number** — prefilled from user profile (editable)
+   600→   600→2. **Department, Year & Section** — prefilled (editable)
+   601→   601→3. **College Name** — prefilled (editable for inter-college context)
+   602→   602→4. **Selected Sport** — dropdown of available sports in this event
+   603→   603→   - **Specific Event Category** — dynamic sub-options (Singles/Doubles/100m etc.)
+   604→   604→5. **Team Details** — shown only if selected sport is team-based:
+   605→   605→   - Is this a team game? (toggle)
+   606→   606→   - Team Name
+   607→   607→   - Captain's Name
+   608→   608→   - Members (dynamic add/remove fields)
+   609→   609→6. **Valid College ID Card** — file upload (image, max 5MB) via Multer
+   610→   610→7. **Student Contact Number & Email ID** — prefilled (editable)
+   611→   611→8. **Emergency Contact** — Parent/Guardian Name + Phone + Relation
+   612→   612→9. **Medical Fitness Declaration:**
+   613→   613→   - Checkbox: "I declare I am medically fit to participate"
+   614→   614→   - Blood Group (dropdown)
+   615→   615→10. **Registration Fee:**
+   616→   616→    - If event is free: "No entry fee required" message
+   617→   617→    - If paid: Transaction ID input + Upload Payment Receipt (image)
+   618→   618→
+   619→   619→**Submit** → Show confirmation modal with:
+   620→   620→- Registration Code (e.g. `SF-2025-00123`)
+   621→   621→- QR Code (unique to this registration)
+   622→   622→- Option to Download PDF Slip
+   623→   623→- Option to Download as Text File
+   624→   624→
+   625→   625→### 8.5 My Registrations (`/user/my-registrations`)
+   626→   626→
+   627→   627→- Cards for each registered event
+   628→   628→- Status badge: Pending / Approved / Rejected
+   629→   629→- Shows: Event Name, Date, Sport, Registration Code
+   630→   630→- "Download Slip" button (PDF)
+   631→   631→- "View QR Code" button
+   632→   632→
+   633→   633→### 8.6 Profile Page (`/user/profile`)
+   634→   634→
+   635→   635→- Display + edit user info
+   636→   636→- Profile picture upload
+   637→   637→- Bookmarked events list
+   638→   638→- Change password section
+   639→   639→
+   640→   640→---
+   641→   641→
+   642→   642→## 9. ADDITIONAL FEATURES (Senior PE Additions)
+   643→   643→
+   644→   644→### 9.1 Real-Time Status Auto-Update
+   645→   645→
+   646→   646→Backend cron job (node-cron) runs every hour:
+   647→   647→- If `eventDate < now` and `status === 'upcoming'` → set `status = 'ongoing'`
+   648→   648→- If `eventDate < now - 1day` → set `status = 'completed'`
+   649→   649→
+   650→   650→### 9.2 Event Countdown Timer
+   651→   651→
+   652→   652→On event detail page, JavaScript `setInterval` countdown (days:hours:minutes:seconds)
+   653→   653→displayed in `JetBrains Mono`. Hides when event starts.
+   654→   654→
+   655→   655→### 9.3 Search Autocomplete
+   656→   656→
+   657→   657→Live search bar (top of events page) with debounce (300ms).
+   658→   658→Calls `GET /api/events?search=<query>&limit=5` and shows dropdown suggestions.
+   659→   659→
+   660→   660→### 9.4 QR Code Registration Verification
+   661→   661→
+   662→   662→- Each approved registration gets a unique QR code
+   663→   663→- QR encodes: `SF-<eventId>-<registrationId>-<registrationCode>`
+   664→   664→- Admin can scan QR (using phone camera) to verify on event day
+   665→   665→- Future scope: QR scanner page in admin panel
+   666→   666→
+   667→   667→### 9.5 PDF Registration Slip
+   668→   668→
+   669→   669→Using `jsPDF`:
+   670→   670→- SportsFest logo / header
+   671→   671→- Student name, roll no, college
+   672→   672→- Event details
+   673→   673→- Sport and category
+   674→   674→- Registration Code (large, bold)
+   675→   675→- QR Code embedded
+   676→   676→- "This slip must be presented at the venue" footer
+   677→   677→
+   678→   678→### 9.6 Email Confirmation (Nodemailer)
+   679→   679→
+   680→   680→Trigger email on:
+   681→   681→1. User Registration → Welcome email
+   682→   682→2. Event Registration Submitted → "Your registration is under review"
+   683→   683→3. Registration Approved → "Congratulations! You are registered for [Event]" + PDF attached
+   684→   684→4. Registration Rejected → "Unfortunately your registration was not approved" + reason
+   685→   685→
+   686→   686→### 9.7 Bookmarks / Save Events
+   687→   687→
+   688→   688→- Bookmark icon on every event card and detail page
+   689→   689→- Stored in user's profile in MongoDB (`savedEvents: [ObjectId]`)
+   690→   690→- Accessible from Profile page
+   691→   691→
+   692→   692→### 9.8 Toast Notification System
+   693→   693→
+   694→   694→Custom toast component (no external lib needed):
+   695→   695→- Success (white) / Error (dark) / Info (gray)
+   696→   696→- Slide-in from top-right, auto-dismiss after 3s
+   697→   697→
+   698→   698→### 9.9 Skeleton Loaders
+   699→   699→
+   700→   700→Every list (events, registrations) shows glass skeleton cards while API loads.
+   701→   701→No blank screens.
+   702→   702→
+   703→   703→### 9.10 Responsive Design
+   704→   704→
+   705→   705→- Mobile-first Tailwind classes
+   706→   706→- Dock hides labels on mobile, shows only icons
+   707→   707→- Filter sidebar becomes a bottom sheet on mobile
+   708→   708→- All tables become card lists on mobile
+   709→   709→
+   710→   710→### 9.11 404 & Empty States
+   711→   711→
+   712→   712→- Custom 404 page with `Bebas Neue` large "404" text
+   713→   713→- Empty state illustrations for empty events list, empty registrations
+   714→   714→
+   715→   715→### 9.12 Admin Event Duplicate
+   716→   716→
+   717→   717→"Duplicate Event" button in admin events table — creates a copy of an event with a new date field blank, for recurring annual events.
+   718→   718→
+   719→   719→### 9.13 Sports Category Intelligence
+   720→   720→
+   721→   721→When admin selects a sport (e.g. "Badminton"), the Event Category sub-field
+   722→   722→in the student form auto-populates with smart defaults:
+   723→   723→- Badminton → Singles, Doubles, Mixed Doubles
+   724→   724→- Football → Team (11-a-side), Team (7-a-side)
+   725→   725→- Track & Field → 100m, 200m, 400m, 800m, 1500m, 4x100m Relay, Long Jump, High Jump, Shot Put, Javelin Throw
+   726→   726→- Cricket → Team (11-a-side)
+   727→   727→- etc.
+   728→   728→
+   729→   729→### 9.14 Progressive Web App (PWA)
+   730→   730→
+   731→   731→Add `manifest.json` + service worker for:
+   732→   732→- "Add to Home Screen" on mobile
+   733→   733→- Offline fallback page
+   734→   734→
+   735→   735→---
+   736→   736→
+   737→   737→## 10. FOLDER STRUCTURE
+   738→   738→
+   739→   739→```
+   740→   740→sportsfest/
+   741→   741→├── client/                          # React (Vite)
+   742→   742→│   ├── public/
+   743→   743→│   │   └── manifest.json
+   744→   744→│   ├── src/
+   745→   745→│   │   ├── assets/                  # Fonts, icons, images
+   746→   746→│   │   ├── components/
+   747→   747→│   │   │   ├── common/              # Button, Input, Modal, Toast, Skeleton, Badge
+   748→   748→│   │   │   ├── layout/              # Dock, Navbar, ThemeToggle, Layout
+   749→   749→│   │   │   ├── cards/               # EventCard, RegistrationCard
+   750→   750→│   │   │   └── forms/               # EventForm (multi-step), RegistrationForm
+   751→   751→│   │   ├── pages/
+   752→   752→│   │   │   ├── auth/                # Login.jsx, Register.jsx
+   753→   753→│   │   │   ├── user/                # Home, Events, EventDetail, Apply, MyRegs, Profile
+   754→   754→│   │   │   └── admin/               # Dashboard, AddEvent, EditEvent, AllEvents, AllRegs
+   755→   755→│   │   ├── store/                   # Zustand stores: authStore, eventStore, uiStore
+   756→   756→│   │   ├── hooks/                   # useAuth, useEvents, useRegistration, useTheme
+   757→   757→│   │   ├── services/                # axios instance, api.js
+   758→   758→│   │   ├── utils/                   # formatDate, generateQR, downloadPDF, exportTxt
+   759→   759→│   │   ├── styles/                  # global.css, glass.css, dock.css, fonts.css
+   760→   760→│   │   ├── App.jsx
+   761→   761→│   │   └── main.jsx
+   762→   762→│   ├── index.html
+   763→   763→│   ├── vite.config.js
+   764→   764→│   └── tailwind.config.js
+   765→   765→│
+   766→   766→├── server/                          # Node + Express
+   767→   767→│   ├── config/
+   768→   768→│   │   ├── db.js                    # MongoDB connection
+   769→   769→│   │   └── mailer.js                # Nodemailer setup
+   770→   770→│   ├── models/
+   771→   771→│   │   ├── User.model.js
+   772→   772→│   │   ├── Event.model.js
+   773→   773→│   │   └── Registration.model.js
+   774→   774→│   ├── routes/
+   775→   775→│   │   ├── auth.routes.js
+   776→   776→│   │   ├── event.routes.js
+   777→   777→│   │   ├── registration.routes.js
+   778→   778→│   │   ├── user.routes.js
+   779→   779→│   │   └── upload.routes.js
+   780→   780→│   ├── controllers/
+   781→   781→│   │   ├── auth.controller.js
+   782→   782→│   │   ├── event.controller.js
+   783→   783→│   │   ├── registration.controller.js
+   784→   784→│   │   └── user.controller.js
+   785→   785→│   ├── middleware/
+   786→   786→│   │   ├── auth.middleware.js
+   787→   787→│   │   ├── admin.middleware.js
+   788→   788→│   │   ├── errorHandler.js
+   789→   789→│   │   └── rateLimiter.js
+   790→   790→│   ├── utils/
+   791→   791→│   │   ├── generateToken.js
+   792→   792→│   │   ├── generateCode.js          # SF-2025-XXXXX generator
+   793→   793→│   │   ├── generateQR.js
+   794→   794→│   │   ├── exportToText.js
+   795→   795→│   │   └── emailTemplates.js
+   796→   796→│   ├── jobs/
+   797→   797→│   │   └── eventStatusCron.js       # node-cron status updater
+   798→   798→│   ├── seeds/
+   799→   799→│   │   └── adminSeed.js             # Seed admin from .env
+   800→   800→│   ├── uploads/                     # Multer storage directory
+   801→   801→│   ├── .env
+   802→   802→│   ├── server.js
+   803→   803→│   └── package.json
+   804→   804→│
+   805→   805→├── .gitignore
+   806→   806→└── README.md
+   807→   807→```
+   808→   808→
+   809→   809→---
+   810→   810→
+   811→   811→## 11. ENVIRONMENT VARIABLES
+   812→   812→
+   813→   813→### `server/.env`
+   814→   814→
+   815→   815→```env
+   816→   816→NODE_ENV=development
+   817→   817→PORT=5000
+   818→   818→MONGO_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/sportsfest
+   819→   819→JWT_ACCESS_SECRET=<strong_random_secret>
+   820→   820→JWT_REFRESH_SECRET=<another_strong_secret>
+   821→   821→JWT_ACCESS_EXPIRY=1h
+   822→   822→JWT_REFRESH_EXPIRY=7d
+   823→   823→ADMIN_EMAIL=gobinath5671@gmail.com
+   824→   824→ADMIN_PASSWORD=Gobin@th.31
+   825→   825→CLIENT_URL=http://localhost:5173
+   826→   826→EMAIL_HOST=smtp.gmail.com
+   827→   827→EMAIL_PORT=587
+   828→   828→EMAIL_USER=<your_gmail>
+   829→   829→EMAIL_PASS=<app_password>
+   830→   830→EMAIL_FROM=SportsFest <noreply@sportsfest.in>
+   831→   831→UPLOAD_DIR=./uploads
+   832→   832→MAX_FILE_SIZE=5242880
+   833→   833→```
+   834→   834→
+   835→   835→### `client/.env`
+   836→   836→
+   837→   837→```env
+   838→   838→VITE_API_BASE_URL=http://localhost:5000/api
+   839→   839→```
+   840→   840→
+   841→   841→---
+   842→   842→
+   843→   843→## 12. GITHUB BRANCHING STRATEGY
+   844→   844→
+   845→   845→```
+   846→   846→main          ← Production-ready, only merged via PR
+   847→   847→dev           ← Integration branch
+   848→   848→feature/*     ← All new features (e.g. feature/admin-event-form)
+   849→   849→fix/*         ← Bug fixes
+   850→   850→hotfix/*      ← Critical production fixes
+   851→   851→```
+   852→   852→
+   853→   853→Commit message convention: `type(scope): message`
+   854→   854→```
+   855→   855→feat(auth): add JWT refresh token rotation
+   856→   856→fix(events): correct filter by date range
+   857→   857→style(ui): update dock hover animation
+   858→   858→docs: update README with deployment steps
+   859→   859→```
+   860→   860→
+   861→   861→---
+   862→   862→
+   863→   863→## 13. DEPLOYMENT CHECKLIST
+   864→   864→
+   865→   865→| Service | Platform | Notes |
+   866→   866→|---|---|---|
+   867→   867→| MongoDB | MongoDB Atlas | Free M0 cluster, whitelist all IPs (0.0.0.0) |
+   868→   868→| Backend | Render (free tier) | Set all env vars in Render dashboard |
+   869→   869→| Frontend | Vercel | Set `VITE_API_BASE_URL` to Render URL |
+   870→   870→| File Uploads | Cloudinary (recommended) | Replace local Multer storage for production |
+   871→   871→
+   872→   872→### Vercel `vercel.json` (for SPA routing):
+   873→   873→
+   874→   874→```json
+   875→   875→{
+   876→   876→  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+   877→   877→}
+   878→   878→```
+   879→   879→
+   880→   880→---
+   881→   881→
+   882→   882→## 14. README.MD STRUCTURE
+   883→   883→
+   884→   884→```markdown
+   885→   885→# SportsFest — Inter-College Sports Events Portal
+   886→   886→
+   887→   887→## 🏆 Live Demo
+   888→   888→[Live Link Here]
+   889→   889→
+   890→   890→## 📋 Overview
+   891→   891→[Brief description]
+   892→   892→
+   893→   893→## 🛠️ Tech Stack
+   894→   894→[Table]
+   895→   895→
+   896→   896→## 🚀 Local Setup
+   897→   897→### Prerequisites
+   898→   898→- Node.js v18+
+   899→   899→- MongoDB (local or Atlas)
+   900→   900→
+   901→   901→### Clone & Install
+   902→   902→\`\`\`bash
+   903→   903→git clone https://github.com/<org>/sportsfest.git
+   904→   904→cd sportsfest
+   905→   905→# Install server deps
+   906→   906→cd server && npm install
+   907→   907→# Install client deps
+   908→   908→cd ../client && npm install
+   909→   909→\`\`\`
+   910→   910→
+   911→   911→### Configure Environment
+   912→   912→[Instructions to copy .env.example]
+   913→   913→
+   914→   914→### Run Dev
+   915→   915→\`\`\`bash
+   916→   916→# Terminal 1 — Backend
+   917→   917→cd server && npm run dev
+   918→   918→# Terminal 2 — Frontend
+   919→   919→cd client && npm run dev
+   920→   920→\`\`\`
+   921→   921→
+   922→   922→## 📡 API Endpoints
+   923→   923→[Full table of all endpoints]
+   924→   924→
+   925→   925→## 🗂️ Architecture
+   926→   926→[ERD diagram and folder structure]
+   927→   927→
+   928→   928→## 👥 Team
+   929→   929→[Names and roles]
+   930→   930→```
+   931→   931→
+   932→   932→---
+   933→   933→
+   934→   934→## 15. QUALITY GATES BEFORE FINAL SUBMISSION
+   935→   935→
+   936→   936→- [ ] All API routes return consistent `{ success, data, message }` shape
+   937→   937→- [ ] 401/403/404/500 errors all handled globally
+   938→   938→- [ ] All forms have client-side + server-side validation
+   939→   939→- [ ] Admin panel is inaccessible to student accounts (middleware enforced)
+   940→   940→- [ ] File uploads limited to images only (mime-type check in Multer)
+   941→   941→- [ ] No raw passwords in DB (all bcrypt hashed)
+   942→   942→- [ ] No JWT secrets in frontend code
+   943→   943→- [ ] Mobile responsive: tested on 375px width
+   944→   944→- [ ] Dark mode + Light mode both fully functional
+   945→   945→- [ ] Countdown timer stops and shows "Event Started" when date passes
+   946→   946→- [ ] Empty state UI for no events / no registrations
+   947→   947→- [ ] Registration disabled after deadline passes
+   948→   948→- [ ] CORS configured for production URL only in production
+   949→   949→
+   950→   950→---
+   951→   951→
+   952→   952→## 16. FUTURE SCOPE (Post-Internship Enhancements)
+   953→   953→
+   954→   954→- Live score updates (WebSocket / Socket.IO)
+   955→   955→- Notification system (in-app + push via Firebase)
+   956→   956→- College leaderboard / overall championship points tracker
+   957→   957→- Student achievement badges (participated, won, runner-up)
+   958→   958→- Event gallery (post-event photo uploads)
+   959→   959→- Admin multi-user (multiple colleges can have their own admin sub-accounts)
+   960→   960→- Mobile app (React Native using same backend)
+   961→   961→- Government sports events integration (API from SAI / local bodies)
+   962→   962→
+   963→   963→---
+   964→   964→
+   965→   965→*Prompt engineered for SportsFest Internship — Full Stack Development*
+   966→   966→*This document is the single source of truth for the entire project.*
+   967→   967→*All team members must read and align with this before writing any code.*
+   968→   968→

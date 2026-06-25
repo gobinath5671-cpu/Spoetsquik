@@ -1,0 +1,112 @@
+// SportsFest — Inter-College Sports Events Portal
+// Prisma schema (SQLite)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  fullName        String
+  email           String   @unique
+  passwordHash    String
+  role            String   @default("student") // 'student' | 'admin'
+  collegeName     String   @default("")
+  department      String   @default("")
+  year            String   @default("")
+  section         String   @default("")
+  rollNumber      String   @default("")
+  phone           String   @default("")
+  profilePicture  String   @default("")
+  savedEvents     String   @default("") // JSON array of event ids
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  events          Event[]
+  registrations   Registration[]
+}
+
+model Event {
+  id                      String   @id @default(cuid())
+  collegeName             String
+  eventName               String
+  eventDate               DateTime
+  reportingTime           String   @default("")
+  venue                   String   @default("")
+  chiefGuest              String   @default("")
+  categories              String   @default("[]") // JSON array
+  sportsAndGames          String   @default("[]") // JSON array
+  tournamentFormat        String   @default("Knockout")
+  eligibility             String   @default("")
+  prizesCashPrizes        String   @default("")
+  prizesMedals            Boolean  @default(false)
+  prizesChampionship      Boolean  @default(false)
+  prizesDetails           String   @default("")
+  entryFeePerTeam         Float    @default(0)
+  entryFeePerPlayer       Float    @default(0)
+  entryFeeIsFree          Boolean  @default(true)
+  generalRules            String   @default("")
+  dresscode               String   @default("")
+  registrationDeadline    DateTime?
+  registrationLink        String   @default("")
+  contactDirectorName     String   @default("")
+  contactDirectorPhone    String   @default("")
+  contactCaptainName      String   @default("")
+  contactCaptainPhone     String   @default("")
+  contactEmail            String   @default("")
+  eventPoster             String   @default("")
+  status                  String   @default("upcoming") // upcoming | ongoing | completed
+  targetAudience          String   @default("College") // College | School | Both
+  createdBy               String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  createdUser             User?    @relation(fields: [createdBy], references: [id])
+  registrations           Registration[]
+}
+
+model Registration {
+  id                  String   @id @default(cuid())
+  eventId             String
+  studentId           String?
+  registrationCode    String   @unique
+  qrCodeData          String   @default("")
+
+  fullName            String
+  rollNumber          String
+  department          String   @default("")
+  year                String   @default("")
+  section             String   @default("")
+  collegeName         String   @default("")
+  selectedSport       String
+  eventCategory       String   @default("")
+  isTeamGame          Boolean  @default(false)
+  teamName            String   @default("")
+  captainName         String   @default("")
+  members             String   @default("[]") // JSON array
+  idCardUrl           String   @default("")
+  contactNumber       String
+  emailId             String
+  emergencyName       String   @default("")
+  emergencyPhone      String   @default("")
+  emergencyRelation   String   @default("")
+  fitnessConfirmed    Boolean  @default(false)
+  bloodGroup          String   @default("")
+  paymentTxnId        String   @default("")
+  paymentReceiptUrl   String   @default("")
+  isPaid              Boolean  @default(false)
+  status              String   @default("pending") // pending | approved | rejected
+  appliedAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  event               Event    @relation(fields: [eventId], references: [id])
+  student             User?    @relation(fields: [studentId], references: [id])
+
+  @@index([eventId])
+  @@index([studentId])
+}
