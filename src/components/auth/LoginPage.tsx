@@ -10,7 +10,6 @@ import {
   Loader2,
   Eye,
   EyeOff,
-  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,10 +64,6 @@ export function LoginPage() {
     }
   }
 
-  function fillAdminDemo() {
-    setEmail("admin@sportsfest.in");
-    setPassword("Admin@123");
-  }
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden bg-background text-foreground">
@@ -199,24 +194,6 @@ export function LoginPage() {
             </Button>
           </form>
 
-          {/* Admin demo hint */}
-          <button
-            type="button"
-            onClick={fillAdminDemo}
-            className="mt-4 flex w-full items-center gap-2 rounded-lg border border-dashed border-border/70 bg-card/40 px-3 py-2.5 text-left text-xs text-muted-foreground transition hover:border-foreground/40 hover:text-foreground"
-            aria-label="Fill admin demo credentials"
-          >
-            <ShieldCheck className="size-4 shrink-0" />
-            <div className="font-mono leading-tight">
-              <div className="text-[10px] uppercase tracking-wider opacity-70">
-                Admin Demo
-              </div>
-              <div>admin@sportsfest.in / Admin@123</div>
-            </div>
-            <span className="ml-auto text-[10px] uppercase tracking-wider opacity-60">
-              Click to fill
-            </span>
-          </button>
 
           <div className="mt-6 border-t border-border/60 pt-5 text-center">
             <p className="text-sm text-muted-foreground">
